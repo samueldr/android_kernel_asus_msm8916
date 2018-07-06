@@ -101,6 +101,10 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 			pr_debug("reset disable: pinctrl not enabled\n");
 	}
 	
+
+	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
+		pr_debug("reset disable: pinctrl not enabled\n");
+
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: Disabling panel bias vreg. ndx = %d\n",
 		       __func__, ctrl_pdata->ndx);
@@ -1880,6 +1884,10 @@ int dsi_panel_device_register(struct device_node *pan_node,
 					pinfo->mipi.dsi_phy_db.regulator[i]	= data[i];
 				}
 				break;
+	}
+	for (i = 0; i < len; i++) {
+		pinfo->mipi.dsi_phy_db.regulator[i]
+			= data[i];
 	}
 
 	data = of_get_property(ctrl_pdev->dev.of_node,

@@ -526,13 +526,14 @@ static ssize_t mdss_fb_get_panel_info(struct device *dev,
 			"pu_en=%d\nxstart=%d\nwalign=%d\nystart=%d\nhalign=%d\n"
 			"min_w=%d\nmin_h=%d\nroi_merge=%d\ndyn_fps_en=%d\n"
 			"min_fps=%d\nmax_fps=%d\npanel_name=%s\n"
-			"primary_panel=%d\n",
+			"primary_panel=%d\nidle_fps=%d\n",
 			pinfo->partial_update_enabled, pinfo->xstart_pix_align,
 			pinfo->width_pix_align, pinfo->ystart_pix_align,
 			pinfo->height_pix_align, pinfo->min_width,
 			pinfo->min_height, pinfo->partial_update_roi_merge,
 			pinfo->dynamic_fps, pinfo->min_fps, pinfo->max_fps,
-			pinfo->panel_name, pinfo->is_prim_panel);
+			pinfo->panel_name, pinfo->is_prim_panel,
+			pinfo->idle_fps);
 
 	return ret;
 }
@@ -1252,8 +1253,8 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 
 	if (
 #ifndef CONFIG_LEDS_TRIGGER_BACKLIGHT
-	    (((mdss_fb_is_power_off(mfd) && mfd->dcm_state != DCM_ENTER)
-		|| !mfd->allow_bl_updated) && !IS_CALIB_MODE_BL(mfd)) ||
+		(((mdss_fb_is_power_off(mfd) && mfd->dcm_state != DCM_ENTER)
+		|| !mfd->allow_bl_update) && !IS_CALIB_MODE_BL(mfd)) ||
 #endif
 		mfd->panel_info->cont_splash_enabled) {
 		if((0 == temp) &&(0 == strcmp(boot_to_charger_mode,"charger"))
@@ -2339,20 +2340,12 @@ static int mdss_fb_open(struct fb_info *info, int user)
 	int result;
 	int pid = current->tgid;
 	struct task_struct *task = current->group_leader;
-	/* ASUS_BSP: Louis ++   */
-	static int unexpected_fb_open = 5;
 
 	if (mfd->shutdown_pending) {
-		if (unexpected_fb_open > 0) {
-			unexpected_fb_open--;
-			pr_err("Shutdown pending. Aborting operation. Request from pid:%d name=%s, unexpected_fb_open(%d)\n",
-					pid, task->comm, unexpected_fb_open);
-			return -EPERM;
-		} else {
-			return 0;
-		}
+		pr_err("Shutdown pending. Aborting operation. Request from pid:%d name=%s\n",
+				pid, task->comm);
+		return -EPERM;
 	}
-	/* ASUS_BSP: Louis --   */
 
 	file_info = kmalloc(sizeof(*file_info), GFP_KERNEL);
 	if (!file_info) {
@@ -2426,20 +2419,13 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 	int pid = current->tgid;
 	bool unknown_pid = true, release_needed = false;
 	struct task_struct *task = current->group_leader;
-	/* ASUS_BSP: Holt ++   */
-	static int unexpected_fb_release = 5;
+
 	if (!mfd->ref_cnt) {
-		if(unexpected_fb_release > 0)
-		{	
-			unexpected_fb_release--;
-			pr_info("try to close unopened fb %d! from %s\n", mfd->index,
+		pr_info("try to close unopened fb %d! from %s\n", mfd->index,
 			task->comm);
-			return -EINVAL;
-		} else {
-			return 0;
-		}
+		return -EINVAL;
 	}
-	/* ASUS_BSP: Holt --   */
+
 	if (!wait_event_timeout(mfd->ioctl_q,
 		!atomic_read(&mfd->ioctl_ref_cnt) || !release_all,
 		msecs_to_jiffies(1000)))

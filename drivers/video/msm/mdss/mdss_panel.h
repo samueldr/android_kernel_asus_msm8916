@@ -45,7 +45,6 @@ struct panel_id {
 #define LVDS_PANEL		11	/* LVDS */
 #define EDP_PANEL		12	/* LVDS */
 
-
 static inline const char *mdss_panel2str(u32 panel)
 {
 	static const char const *names[] = {
@@ -413,6 +412,7 @@ struct mdss_panel_info {
 	u32 min_height;
 	u32 min_fps;
 	u32 max_fps;
+	u32 idle_fps;
 
 	u32 cont_splash_enabled;
 	bool esd_rdy;
